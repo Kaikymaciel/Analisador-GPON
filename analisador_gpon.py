@@ -1,6 +1,13 @@
 import pandas as pd
+import asyncio
+import aiohttp
+import json
 
 print("\n===== ANALISADOR GPON =====")
+
+# =========================
+# INPUTS
+# =========================
 
 tipo_problema = input(
 """O que você quer verificar?
@@ -11,8 +18,7 @@ tipo_problema = input(
 Escolha: """)
 
 while tipo_problema not in ["1", "2"]:
-    print("Escolha inválida. Digite 1 ou 2.")
-    tipo_problema = input("Escolha: ")
+    tipo_problema = input("Escolha inválida. Digite 1 ou 2: ")
 
 tipo_sinal = input(
 """
@@ -24,10 +30,11 @@ Qual sinal deseja analisar?
 Escolha: """)
 
 while tipo_sinal not in ["1", "2"]:
-    print("Escolha inválida. Digite 1 ou 2.")
-    tipo_sinal = input("Escolha: ")
+    tipo_sinal = input("Escolha inválida. Digite 1 ou 2: ")
 
-# definição de arquivos
+# =========================
+# ARQUIVO
+# =========================
 
 if tipo_sinal == "1":
     arquivo = "relatorio_rx.csv"
@@ -36,101 +43,199 @@ else:
     arquivo = "relatorio_tx.csv"
     coluna_sinal = "Sinal TX"
 
-# carregar dados
-
 dados = pd.read_csv(arquivo, sep=";")
-
 print("\nArquivo carregado com sucesso!\n")
 
-lista_olts = dados["Transmissor"].dropna().unique().tolist()
+# =========================
+# AGRUPAR CLIENTES POR PON
+# =========================
 
-estrutura_rede = {}
+estrutura = {}
 
-for olt in lista_olts:
+for _, linha in dados.iterrows():
+    try:
+        sinal = float(linha[coluna_sinal])
+    except:
+        continue
 
-    estrutura_rede[olt] = {}
+    chave = (linha["Transmissor"], linha["PON ID"])
 
-    for placa in range(1, 17):
+    if chave not in estrutura:
+        estrutura[chave] = []
 
-        for porta in range(0, 16):
+    estrutura[chave].append({
+        "cliente": linha["Nome"],
+        "sn": linha["MAC/Serial"],
+        "sinal": sinal
+    })
 
-            pon = f"0/{placa}/{porta}"
+# =========================
+# RANKING (PIOR PRIMEIRO)
+# =========================
 
-            estrutura_rede[olt][pon] = []
+ranking = sorted(
+    [(chave, min(c["sinal"] for c in clientes))
+     for chave, clientes in estrutura.items()],
+    key=lambda x: x[1]
+)
 
-# associar clientes
+# =========================
+# API (SÓ PRA PRIMÁRIA)
+# =========================
 
-for index, linha in dados.iterrows():
+async def consultar_media(session, olt, pon):
+    url = "https://nmt.nmultifibra.com.br/monitoramento/optical-info"
+    headers = {'Content-Type': 'application/json'}
 
-    olt = linha["Transmissor"]
-    pon = linha["PON ID"]
-    cliente = linha["Nome"]
-    sn = linha["MAC/Serial"]
+    try:
+        payload = json.dumps({"gpon": pon, "host": olt})
 
-    sinal = float(linha[coluna_sinal])
+        async with session.post(
+            url,
+            headers=headers,
+            data=payload,
+            timeout=aiohttp.ClientTimeout(total=6)
+        ) as resp:
 
-    if olt in estrutura_rede and pon in estrutura_rede[olt]:
+            if resp.status != 200:
+                return None
 
-        estrutura_rede[olt][pon].append({
-            "cliente": cliente,
-            "sn": sn,
-            "sinal": sinal
-        })
+            data = await resp.json()
 
-# analisar pons
+            if "median" not in data:
+                return None
 
-pon_problema = {}
+            if tipo_sinal == "1":
+                return data["median"].get("rxPower")
+            else:
+                return data["median"].get("txPower")
 
-for olt in estrutura_rede:
+    except:
+        return None
 
-    for pon in estrutura_rede[olt]:
 
-        lista_clientes = estrutura_rede[olt][pon]
+async def coletar_medias(pons):
+    medias = {}
+    semaphore = asyncio.Semaphore(6)
 
-        if len(lista_clientes) > 0:
+    async with aiohttp.ClientSession() as session:
 
-            pior_sinal = min(cliente["sinal"] for cliente in lista_clientes)
+        async def task(olt, pon):
+            async with semaphore:
+                media = await consultar_media(session, olt, pon)
+                return (olt, pon, media)
 
-            chave = (olt, pon)
+        tarefas = [task(olt, pon) for olt, pon in pons]
+        resultados = await asyncio.gather(*tarefas)
 
-            pon_problema[chave] = pior_sinal
+        for olt, pon, media in resultados:
+            if media is not None:
+                medias[(olt, pon)] = media
 
-# ordenar pons pelo pior sinal
+    return medias
 
-ranking = sorted(pon_problema.items(), key=lambda x: x[1])
-
-top_ranking = ranking[:20]
-
-# gerar relatório
+# =========================
+# PROCESSAMENTO
+# =========================
 
 relatorio = []
+contador = 0
+limite = 20
 
-if tipo_problema == "2":
-    relatorio.append("PONs com POSSÍVEIS clientes isolados\n")
+# =========================
+# CASO 1 - PRIMÁRIA
+# =========================
+
+if tipo_problema == "1":
+
+    print("Consultando API (somente PONs com potencial de primária)...")
+
+    # só consulta PONs com 5+ clientes
+    pons_para_api = [
+        chave for chave, clientes in estrutura.items()
+        if len(clientes) >= 5
+    ]
+
+    medias_pons = asyncio.run(coletar_medias(pons_para_api))
+
+    relatorio.append("PONs com PROBLEMA DE PRIMÁRIA\n")
+
+    for (olt, pon), pior_sinal in ranking:
+
+        if contador >= limite:
+            break
+
+        if (olt, pon) not in medias_pons:
+            continue
+
+        media = medias_pons[(olt, pon)]
+        clientes = estrutura[(olt, pon)]
+
+        if len(clientes) < 5:
+            continue
+
+        clientes_ordenados = sorted(clientes, key=lambda x: x["sinal"])
+        top_clientes = clientes_ordenados[:5]
+
+        # clientes próximos da média
+        proximos = [
+            c for c in top_clientes
+            if abs(c["sinal"] - media) <= 2
+        ]
+
+        # regra de primária
+        if media <= -25 and len(proximos) >= 3:
+
+            relatorio.append(
+                f"\nOLT: {olt} | PON: {pon} | Média: {media} | Pior: {pior_sinal}"
+            )
+
+            # 🔥 TODOS OS CLIENTES
+            for c in clientes_ordenados:
+                relatorio.append(
+                    f"Cliente: {c['cliente']} | SN: {c['sn']} | Sinal: {c['sinal']}"
+                )
+
+            relatorio.append("\n")
+            contador += 1
+
+# =========================
+# CASO 2 - ISOLADO
+# =========================
+
 else:
-    relatorio.append("PONs com PIORES sinais\n")
 
-for (olt, pon), pior_sinal in top_ranking:
+    relatorio.append("PONs com CLIENTES ISOLADOS\n")
 
-    relatorio.append(f"\nOLT: {olt} | PON: {pon} | Pior sinal: {pior_sinal}")
+    for (olt, pon), pior_sinal in ranking:
 
-    clientes = estrutura_rede[olt][pon]
+        if contador >= limite:
+            break
 
-    clientes_ordenados = sorted(clientes, key=lambda x: x["sinal"])
+        clientes = estrutura[(olt, pon)]
 
-    top_clientes = clientes_ordenados[:5]
+        # 🔥 REGRA SIMPLES E EFICIENTE
+        if len(clientes) <= 4:
 
-    for cliente in top_clientes:
+            clientes_ordenados = sorted(clientes, key=lambda x: x["sinal"])
 
-        relatorio.append(
-            f"Cliente: {cliente['cliente']} | SN: {cliente['sn']} | Sinal: {cliente['sinal']}"
-        )
+            relatorio.append(
+                f"\nOLT: {olt} | PON: {pon} | Pior: {pior_sinal}"
+            )
 
-# salvar relatório
+            for c in clientes_ordenados:
+                relatorio.append(
+                    f"Cliente: {c['cliente']} | SN: {c['sn']} | Sinal: {c['sinal']}"
+                )
+
+            relatorio.append("\n")
+            contador += 1
+
+# =========================
+# SALVAR
+# =========================
 
 with open("relatorio_gpon.txt", "w", encoding="utf-8") as f:
+    f.write("\n".join(relatorio))
 
-    for linha in relatorio:
-        f.write(linha + "\n")
-
-print("Relatório gerado com sucesso: relatorio_gpon.txt")
+print("\nRelatório gerado com sucesso! (Top 20)\n")

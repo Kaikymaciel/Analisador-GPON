@@ -1,0 +1,103 @@
+PONs com CLIENTES ISOLADOS
+
+
+OLT: OLT_JNDR_01 | PON: 0/10/7 | Pior: -40.0
+Cliente: 11959@diginetbrasil.com.br | SN: ="4648545408352048" | Sinal: -40.0
+
+
+
+OLT: OLT_JNDR_01 | PON: 0/6/1 | Pior: -36.98
+Cliente: 20853@diginetbrasil.com.br | SN: 464854542323d188 | Sinal: -36.98
+
+
+
+OLT: OLT_COTIA_01 | PON: 0/15/2 | Pior: -36.98
+Cliente: ="50264" | SN: 46524B5727826720 | Sinal: -36.98
+
+
+
+OLT: OLT_COTIA_01_ANTIGA | PON: 0/12/9 | Pior: -36.98
+Cliente:  16365--EDMILSON ALMEIDA--ESTRADA DA ROSELANDIA  | SN: 46494F475400EE78 | Sinal: -36.98
+
+
+
+OLT: OLT_COTIA_01 | PON: 0/10/15 | Pior: -36.97
+Cliente: ="12699" | SN: 46524B57236A2351 | Sinal: -36.97
+
+
+
+OLT: OLT_JNDR_01 | PON: 0/6/14 | Pior: -35.22
+Cliente: 39684_@diginetbrasil.com.br | SN: ="4648545410112278" | Sinal: -35.22
+
+
+
+OLT: OLT_JNDR_01 | PON: 0/5/12 | Pior: -35.22
+Cliente: 6437@diginetbrasil.com.br | SN: ="4648545492396688" | Sinal: -35.22
+
+
+
+OLT: OLT_JNDR_03 | PON: 0/4/5 | Pior: -35.22
+Cliente: 7965diginetbrasil.com.br | SN: 46485454923936c8 | Sinal: -35.22
+
+
+
+OLT: OLT_CCDA_02 | PON: 0/1/0 | Pior: -35.22
+Cliente: ="61329" | SN: 48575443F27A75AC | Sinal: -35.22
+
+
+
+OLT: OLT_COTIA_03 | PON: 0/7/8 | Pior: -35.22
+Cliente: ="50368" | SN: 46524B5727828722 | Sinal: -35.22
+
+
+
+OLT: OLT_COTIA_01_ANTIGA | PON: 0/6/8 | Pior: -35.22
+Cliente: ="63269" | SN: 485754434EDF5DAC | Sinal: -35.22
+
+
+
+OLT: OLT_CPTR_01 | PON: 0/4/5 | Pior: -35.22
+Cliente: ="42851" | SN: 46524B572782DFA6 | Sinal: -35.22
+
+
+
+OLT: OLT_TRMS_01 | PON: 0/1/7 | Pior: -35.22
+Cliente: ="173474" | SN: 46524B57235F4FCF | Sinal: -35.22
+
+
+
+OLT: OLT_SNTN_01 | PON: 0/12/14 | Pior: -33.97
+Cliente: ="17755745805" | SN: 48575443A4F99DB4 | Sinal: -33.97
+Cliente: 34727@diginetbrasil.com.br | SN: 46485454fe28de6f | Sinal: -33.0
+
+
+
+OLT: OLT_ITPV_01 | PON: 0/1/10 | Pior: -33.97
+Cliente: 10835@diginetbrasil.com.br | SN: 464854549100E480 | Sinal: -33.97
+Cliente: 19149@diginetbrasil.com.br | SN: 464854549aa66590 | Sinal: -33.0
+
+
+
+OLT: OLT_JNDR_03 | PON: 0/3/0 | Pior: -33.97
+Cliente: 39933@diginetbrasil.com.br | SN: 48575443D39BF4B3 | Sinal: -33.97
+
+
+
+OLT: OLT_EMBU_01 | PON: 0/5/14 | Pior: -33.97
+Cliente: 127715xx | SN: 48575443D3C696B3 | Sinal: -33.97
+
+
+
+OLT: OLT_JNDR_02 | PON: 0/10/8 | Pior: -33.97
+Cliente: 37143@diginetbrasil.com.br | SN: 46485454073b93f8 | Sinal: -33.97
+
+
+
+OLT: OLT_SNTN_01 | PON: 0/14/0 | Pior: -33.97
+Cliente: PON[2]-AN5506-02-B[2] | SN: 4648545494343f10 | Sinal: -33.97
+
+
+
+OLT: OLT_ITPV_01 | PON: 0/1/2 | Pior: -33.97
+Cliente: 21990@diginetbrasil.com.br | SN: 464854549a3f0208 | Sinal: -33.97
+
